@@ -20,7 +20,8 @@ const noteSchema = new mongoose.Schema({
 });
 const Note = mongoose.model("Note", noteSchema);
 
-// --- Notes Route ---
+// --- Notes Routes ---
+// Create note (existing route)
 app.post("/api/notes", async (req, res) => {
   try {
     const { note } = req.body;
@@ -29,6 +30,26 @@ app.post("/api/notes", async (req, res) => {
     res.status(201).json({ message: "Note saved!" });
   } catch (err) {
     res.status(500).json({ message: "Error saving note." });
+  }
+});
+
+// Get all notes (new route)
+app.get("/api/notes", async (req, res) => {
+  try {
+    const notes = await Note.find().sort({ createdAt: -1 });
+    res.json(notes);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching notes." });
+  }
+});
+
+// Delete note (new route)
+app.delete("/api/notes/:id", async (req, res) => {
+  try {
+    await Note.findByIdAndDelete(req.params.id);
+    res.json({ message: "Note deleted successfully!" });
+  } catch (err) {
+    res.status(500).json({ message: "Error deleting note." });
   }
 });
 
@@ -43,3 +64,9 @@ mongoose
     app.listen(5000, () => console.log("Server running on port 5000"));
   })
   .catch((err) => console.log(err));
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: "Something went wrong!" });
+});
