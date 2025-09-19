@@ -97,9 +97,8 @@ function NotesWindow() {
 
       <div className="mt-2 flex gap-2">
         <button
-          className={`px-3 py-1 rounded text-white ${
-            isListening ? "bg-red-500" : "bg-green-500"
-          }`}
+          className={`px-3 py-1 rounded text-white ${isListening ? "bg-red-500" : "bg-green-500"
+            }`}
           onClick={isListening ? handleStopListening : handleStartListening}
         >
           {isListening ? "🛑 Stop" : "🎤 Speak"}
