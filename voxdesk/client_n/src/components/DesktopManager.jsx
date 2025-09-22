@@ -1,17 +1,28 @@
-import { Link } from "react-router-dom";
-import { MdNote, MdChecklist } from "react-icons/md";
+import { Link, useNavigate } from "react-router-dom";
+import { MdNote, MdChecklist, MdLogout } from "react-icons/md";
 import React, { useEffect, useState } from "react";
 import VoiceCommand from "./VoiceCommand";
 import AIAssistant from "./AIAssistant";
 
 function DesktopManager() {
   const [user, setUser] = useState({});
+  const navigate = useNavigate();
 
   // Load user data from localStorage
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user') || '{}');
     setUser(userData);
   }, []);
+
+  // Logout function - Step 3 implementation
+  const handleLogout = () => {
+    // Clear all session data
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    // Redirect to login with replace to prevent back navigation
+    navigate("/login", { replace: true });
+  };
 
   return (
     <div
@@ -109,6 +120,24 @@ function DesktopManager() {
           <MdChecklist size={28} />
           <span style={{ fontSize: "1.1rem", fontWeight: 500 }}>To-Do</span>
         </Link>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          style={{
+            ...linkStyle,
+            border: "none",
+            cursor: "pointer",
+            backgroundColor: "#dc2626", // Red background for logout
+            marginTop: "auto", // Push to bottom
+            marginBottom: "1rem"
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.background = "#b91c1c")}
+          onMouseOut={(e) => (e.currentTarget.style.background = "#dc2626")}
+        >
+          <MdLogout size={28} />
+          <span style={{ fontSize: "1.1rem", fontWeight: 500 }}>Logout</span>
+        </button>
 
       </nav>
 

@@ -1,32 +1,46 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./auth/Login";
 import Register from "./auth/Register";
-import SignUp from "./auth/SignUp";
 import DesktopManager from "./components/DesktopManager";
 import Profile from "./auth/Profile";
-import LoginSuccess from "./auth/LoginSuccess";
+import NotesWindow from "./windows/NotesWindow"; // Import NotesWindow
+import TodoWindow from "./windows/TodoWindow"; // Import TodoWindow
 
-// Simple auth protection
+// For login/register pages - redirect to desktop if already logged in
+const AuthRoute = ({ children }) => {
+  const isAuthenticated = localStorage.getItem("token");
+  return isAuthenticated ? <Navigate to="/desktop" replace /> : children;
+};
+
+// For protected pages - redirect to login if NOT logged in
 const ProtectedRoute = ({ children }) => {
   const isAuthenticated = localStorage.getItem("token");
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/*This code is pasted so that like to push each time the login part,,*\<Route path="/" element={<Navigate to="/login" />} />}
-        {/* Root route - redirect to desktop if logged in, otherwise to login */}
-        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/" element={
+          localStorage.getItem("token") ?
+            <Navigate to="/desktop" replace /> :
+            <Navigate to="/login" replace />
+        } />
 
-        {/* Auth routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/login/success" element={<LoginSuccess />} />
+        {/* Auth routes: only show if NOT logged in */}
+        <Route path="/login" element={
+          <AuthRoute>
+            <Login />
+          </AuthRoute>
+        } />
+        <Route path="/register" element={
+          <AuthRoute>
+            <Register />
+          </AuthRoute>
+        } />
 
-        {/* Protected routes */}
+        {/* Protected routes: only show if logged in */}
         <Route path="/desktop" element={
           <ProtectedRoute>
             <DesktopManager />
@@ -39,12 +53,12 @@ function App() {
         } />
         <Route path="/notes" element={
           <ProtectedRoute>
-            <DesktopManager />
+            <NotesWindow />
           </ProtectedRoute>
         } />
         <Route path="/todos" element={
           <ProtectedRoute>
-            <DesktopManager />
+            <TodoWindow />
           </ProtectedRoute>
         } />
       </Routes>
