@@ -3,9 +3,17 @@ import { MdNote, MdChecklist, MdLogout } from "react-icons/md";
 import React, { useEffect, useState } from "react";
 import VoiceCommand from "./VoiceCommand";
 import AIAssistant from "./AIAssistant";
+import WeatherWidget from "./WeatherWidget";
+import LiveClock from "./LiveClock";
 
 function DesktopManager() {
   const [user, setUser] = useState({});
+  const [stats, setStats] = useState({
+    totalNotes: 0,
+    totalTodos: 0,
+    completedTodos: 0,
+    loading: true
+  });
   const navigate = useNavigate();
 
   // Load user data from localStorage
@@ -14,13 +22,52 @@ function DesktopManager() {
     setUser(userData);
   }, []);
 
-  // Logout function - Step 3 implementation
+  // Fetch user statistics
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const headers = {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      };
+
+      // Fetch notes count
+      const notesResponse = await fetch("http://localhost:5000/api/notes", { headers });
+      const notes = notesResponse.ok ? await notesResponse.json() : [];
+
+      // Fetch todos count
+      const todosResponse = await fetch("http://localhost:5000/api/todos", { headers });
+      const todos = todosResponse.ok ? await todosResponse.json() : [];
+
+      const completedTodos = todos.filter(todo => todo.completed).length;
+
+      setStats({
+        totalNotes: notes.length,
+        totalTodos: todos.length,
+        completedTodos: completedTodos,
+        loading: false
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      setStats(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  // Load stats on component mount
+  useEffect(() => {
+    fetchStats();
+
+    // Refresh stats every 30 seconds
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Logout function
   const handleLogout = () => {
-    // Clear all session data
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-
-    // Redirect to login with replace to prevent back navigation
     navigate("/login", { replace: true });
   };
 
@@ -32,7 +79,7 @@ function DesktopManager() {
         background: "linear-gradient(135deg, #e0e7ff 0%, #f0fdfa 100%)",
       }}
     >
-      {/* Sidebar */}
+      {/* Sidebar - keep existing code */}
       <nav
         style={{
           width: "220px",
@@ -99,7 +146,6 @@ function DesktopManager() {
           👤 Profile
         </Link>
 
-        {/* Notes Link */}
         <Link
           to="/notes"
           style={linkStyle}
@@ -110,7 +156,6 @@ function DesktopManager() {
           <span style={{ fontSize: "1.1rem", fontWeight: 500 }}>Notes</span>
         </Link>
 
-        {/* To-Do Link */}
         <Link
           to="/todos"
           style={linkStyle}
@@ -121,15 +166,14 @@ function DesktopManager() {
           <span style={{ fontSize: "1.1rem", fontWeight: 500 }}>To-Do</span>
         </Link>
 
-        {/* Logout Button */}
         <button
           onClick={handleLogout}
           style={{
             ...linkStyle,
             border: "none",
             cursor: "pointer",
-            backgroundColor: "#dc2626", // Red background for logout
-            marginTop: "auto", // Push to bottom
+            backgroundColor: "#dc2626",
+            marginTop: "auto",
             marginBottom: "1rem"
           }}
           onMouseOver={(e) => (e.currentTarget.style.background = "#b91c1c")}
@@ -138,7 +182,6 @@ function DesktopManager() {
           <MdLogout size={28} />
           <span style={{ fontSize: "1.1rem", fontWeight: 500 }}>Logout</span>
         </button>
-
       </nav>
 
       {/* Main Content */}
@@ -149,6 +192,7 @@ function DesktopManager() {
           flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
+          padding: "2rem",
         }}
       >
         <h1
@@ -165,29 +209,110 @@ function DesktopManager() {
           style={{
             fontSize: "1.25rem",
             color: "#334155",
-            marginBottom: "2rem",
+            marginBottom: "3rem",
+            textAlign: "center",
           }}
         >
           Your desktop manager is running.
           <br />
-          Start by exploring the Notes or To-Do section, or add more features
-          soon!
+          Start by exploring the Notes or To-Do section, or use voice commands below!
         </p>
 
-        {/* Placeholder for future components */}
-        <div
-          style={{
-            marginTop: "2rem",
-            color: "#64748b",
-            fontStyle: "italic",
-          }}
-        >
-          More features coming soon...
+        {/* Updated Widgets Grid */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+          gap: "2rem",
+          width: "100%",
+          maxWidth: "1200px",
+          marginBottom: "3rem"
+        }}>
+          {/* Weather Widget */}
+          <WeatherWidget />
+
+          {/* Updated Quick Stats Widget with Real Data */}
+          <div className="bg-white rounded-xl p-6 shadow-lg">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">📊 Quick Stats</h3>
+              <button
+                onClick={fetchStats}
+                className="bg-blue-100 hover:bg-blue-200 text-blue-600 p-2 rounded-lg transition-colors"
+                disabled={stats.loading}
+              >
+                {stats.loading ? "⏳" : "🔄"}
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">📝 Total Notes</span>
+                <span className="font-bold text-blue-600 text-lg">
+                  {stats.loading ? "..." : stats.totalNotes}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">📋 Total Tasks</span>
+                <span className="font-bold text-orange-600 text-lg">
+                  {stats.loading ? "..." : stats.totalTodos}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">✅ Completed Tasks</span>
+                <span className="font-bold text-green-600 text-lg">
+                  {stats.loading ? "..." : stats.completedTodos}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">🎤 Voice Commands</span>
+                <span className="font-bold text-purple-600">Active</span>
+              </div>
+
+              {/* Progress Bar for Task Completion */}
+              {stats.totalTodos > 0 && (
+                <div className="mt-4">
+                  <div className="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>Progress</span>
+                    <span>{Math.round((stats.completedTodos / stats.totalTodos) * 100)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(stats.completedTodos / stats.totalTodos) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <LiveClock />
         </div>
 
         {/* Voice + AI Assistant */}
-        <VoiceCommand />
-        <AIAssistant />
+        <div style={{
+          display: "flex",
+          gap: "2rem",
+          flexWrap: "wrap",
+          justifyContent: "center",
+        }}>
+          <VoiceCommand />
+          <AIAssistant />
+        </div>
+
+        {/* Footer */}
+        <div
+          style={{
+            marginTop: "3rem",
+            color: "#64748b",
+            fontStyle: "italic",
+            textAlign: "center",
+          }}
+        >
+          🎉 VoxDesk - Your Voice-Powered Desktop Manager
+        </div>
       </main>
     </div>
   );
