@@ -180,3 +180,104 @@ app.use((err, _req, res, _next) => {
   console.error(err.stack);
   res.status(500).json({ message: "Something went wrong!" });
 });
+
+
+
+
+// ---------- Profile Routes ----------
+const multer = require('multer');
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/avatars/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, req.user._id + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
+
+// Create uploads directory if it doesn't exist
+const fs = require('fs');
+if (!fs.existsSync('uploads/avatars/')) {
+  fs.mkdirSync('uploads/avatars/', { recursive: true });
+}
+
+// Update profile information
+app.put('/api/profile/update', authenticateToken, async (req, res) => {
+  try {
+    const { name, email, currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.user._id);
+
+    // Update basic info
+    if (name) user.name = name;
+    if (email) user.email = email;
+
+    // Handle password change (only for local accounts)
+    if (newPassword && !user.googleId) {
+      if (!currentPassword) {
+        return res.status(400).json({ message: 'Current password is required' });
+      }
+
+      const bcrypt = require('bcrypt');
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({ message: 'Current password is incorrect' });
+      }
+
+      user.password = await bcrypt.hash(newPassword, 10);
+    }
+
+    await user.save();
+    console.log('Profile updated for user:', user.email);
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: {
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        googleId: user.googleId
+      }
+    });
+  } catch (err) {
+    console.error('Error updating profile:', err);
+    res.status(500).json({ message: 'Error updating profile' });
+  }
+});
+
+// Upload profile picture
+app.post('/api/profile/avatar', authenticateToken, upload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const avatarUrl = `http://localhost:5000/uploads/avatars/${req.file.filename}`;
+
+    // Update user's avatar URL in database
+    await User.findByIdAndUpdate(req.user._id, { avatar: avatarUrl });
+
+    console.log('Avatar updated for user:', req.user.email);
+    res.json({
+      message: 'Avatar updated successfully',
+      avatarUrl: avatarUrl
+    });
+  } catch (err) {
+    console.error('Error uploading avatar:', err);
+    res.status(500).json({ message: 'Error uploading avatar' });
+  }
+});
